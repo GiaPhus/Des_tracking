@@ -46,7 +46,7 @@ notion = Client(auth=st.secrets["NOTION_TOKEN"])
 DATABASE_ID = "31b142ff68fe809c9ec0d8dc27dcea43"
 
 # --- DATA LOAD ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=240)
 def get_data_from_notion():
 
     db = notion.databases.retrieve(database_id=DATABASE_ID)
@@ -95,13 +95,16 @@ def get_data_from_notion():
         leisure = get_val("leisure_time")
         eat = get_val("Eat_times")
 
+        nsfw = get_val("NSFW_Event")
+
         score_calc = (
             (20 if gym else 0)
             + min(study * 5, 30)
             + min(pushup / 5, 20)
-            + (15 if (wake_up_time and (wake_up_time + timedelta(hours=7)).hour <= 8) else 0)
+            + (15 if (wake_up_time and wake_up_time.hour <= 8) else 0)
             + (10 if leisure <= 5 else 0)
             + (5 if eat >= 3 else 0)
+            - (10 if nsfw == 1 else 0)
         )
 
         if score_calc >= 70:
