@@ -7,7 +7,8 @@ from datetime import timedelta
 
 st.set_page_config(page_title="Discipline Tracker", layout="wide")
 
-# --- STYLE ---
+# ---------------- STYLE ----------------
+
 st.markdown("""
 <style>
 
@@ -22,41 +23,32 @@ st.markdown("""
     border-radius: 12px;
 }
 
-[data-testid="stMetricValue"] {
-    font-size: 30px;
-}
-
 .block-container {
     padding-top: 2rem;
-}
-
-h1 {
-    color: #1f77b4;
-}
-
-h2, h3 {
-    color: #333333;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# --- NOTION CONFIG ---
+# ---------------- NOTION ----------------
+
 notion = Client(auth=st.secrets["NOTION_TOKEN"])
 DATABASE_ID = "31b142ff68fe809c9ec0d8dc27dcea43"
 
-# --- DATA LOAD ---
+# ---------------- LOAD DATA ----------------
+
 @st.cache_data(ttl=600)
-def get_data_from_notion():
+def get_data():
 
     db = notion.databases.retrieve(database_id=DATABASE_ID)
     data_source_id = db["data_sources"][0]["id"]
 
     res = notion.data_sources.query(data_source_id=data_source_id)
 
-    data = []
+    rows = []
 
     for page in res["results"]:
+
         props = page["properties"]
 
         def get_val(key):
@@ -66,270 +58,167 @@ def get_data_from_notion():
                 return 0
 
             if field["type"] == "formula":
-                f = field["formula"]
-                return f.get("number") if f.get("number") else 0
+                return field["formula"].get("number") or 0
 
             if field["type"] == "number":
-                return field.get("number") if field.get("number") else 0
+                return field.get("number") or 0
 
             return 0
 
         def get_d(key):
             field = props.get(key)
-
-            if field and field.get("date") and field["date"].get("start"):
+            if field and field.get("date"):
                 return pd.to_datetime(field["date"]["start"])
-
             return None
 
         def get_c(key):
             return props.get(key, {}).get("checkbox", False)
 
-        gym = props.get("Gym", {}).get("checkbox", False)
+        gym = get_c("Gym")
         study = get_val("Study_hours")
         pushup = get_val("push_ups")
 
-        wake_up_time = get_d("wake_up")
-        sleep_time = get_d("sleep")
+        wake = get_d("wake_up")
+        sleep = get_d("sleep")
 
         leisure = get_val("leisure_time")
         eat = get_val("Eat_times")
 
-        score_calc = (
+        score = (
             (20 if gym else 0)
             + min(study * 5, 30)
             + min(pushup / 5, 20)
-            + (15 if (wake_up_time and (wake_up_time + timedelta(hours=7)).hour <= 8) else 0)
+            + (15 if (wake and (wake + timedelta(hours=7)).hour <= 8) else 0)
             + (10 if leisure <= 2 else 0)
             + (5 if eat >= 3 else 0)
         )
 
-        if score_calc >= 70:
-            status_calc = "🔥 Disciplined Day"
-        elif score_calc >= 50:
-            status_calc = "😊 Avg Day"
+        if score >= 70:
+            status = "🔥 Disciplined Day"
+        elif score >= 50:
+            status = "😊 Avg Day"
         else:
-            status_calc = "💀 Wasted Day"
+            status = "💀 Wasted Day"
 
-        data.append({
+        rows.append({
             "Date": props["Date"]["date"]["start"],
-            "Score": score_calc,
+            "Score": score,
             "Paid": get_val("Paid"),
-            "Water": get_c("hygrade"),
             "Gym": gym,
             "Study": study,
-            "Status": status_calc,
-            "WakeUp": wake_up_time,
-            "Sleep": sleep_time
+            "Status": status,
+            "WakeUp": wake,
+            "Sleep": sleep
         })
 
-    return pd.DataFrame(data)
+    return pd.DataFrame(rows)
 
-df = get_data_from_notion()
 
-df['Date'] = pd.to_datetime(df['Date'])
+df = get_data()
+
+df["Date"] = pd.to_datetime(df["Date"])
 df = df.sort_values("Date")
 
-df['Date_Str'] = df['Date'].dt.strftime('%d/%m')
+df["Date_Str"] = df["Date"].dt.strftime("%d/%m")
 
-df['Sleep_Duration'] = (df['WakeUp'] - df['Sleep']).dt.total_seconds() / 3600
-df.loc[df['Sleep_Duration'] < 0, 'Sleep_Duration'] += 24
-def metric_card(label, value):
-    """Creates a consistent, bordered metric card."""
-    with st.container(border=True):
-        st.metric(label, value)
-# --- KPIs ---
+df["Sleep_Duration"] = (df["WakeUp"] - df["Sleep"]).dt.total_seconds() / 3600
+df.loc[df["Sleep_Duration"] < 0, "Sleep_Duration"] += 24
+
+# ---------------- MONTH FILTER ----------------
+
+df["Month"] = df["Date"].dt.strftime("%B %Y")
+
+months = sorted(df["Month"].unique(), reverse=True)
+
+selected_month = st.selectbox("📅 Select Month", months)
+
+df = df[df["Month"] == selected_month]
+
+# ---------------- STREAK CALCULATION ----------------
+
+df["Disciplined"] = df["Score"] >= 70
+
+streak = 0
+best = 0
+
+for val in df["Disciplined"]:
+    if val:
+        streak += 1
+        best = max(best, streak)
+    else:
+        streak = 0
+
+current_streak = 0
+
+for val in reversed(df["Disciplined"].tolist()):
+    if val:
+        current_streak += 1
+    else:
+        break
+
+# ---------------- KPI ----------------
+
 st.title("📊 Discipline Control Center")
 
-c1, c2, c3, c4 = st.columns(4)
-with c1: metric_card("Avg Score", f"{df['Score'].mean():.1f}")
-with c2: metric_card("Total Paid", f"{df['Paid'].sum():,.0f} VNĐ")
-with c3: metric_card("Gym Days", df['Gym'].sum())
-with c4: metric_card("Study Hours", f"{df['Study'].sum():.1f}")
+c1,c2,c3,c4 = st.columns(4)
 
-c5, c6, c7, c8 = st.columns(4)
-with c5: metric_card("🔥 Discipline Days", (df["Score"] >= 70).sum())
-with c6: metric_card("📚 Avg Study/Day", f"{df['Study'].mean():.1f}h")
-with c7: metric_card("😴 Avg Sleep", f"{df['Sleep_Duration'].mean():.1f}h")
-with c8: metric_card("💪 Gym Rate", f"{(df['Gym'].sum() / len(df)) * 100:.0f}%")
+c1.metric("Avg Score", f"{df['Score'].mean():.1f}")
+c2.metric("Total Paid", f"{df['Paid'].sum():,.0f} VNĐ")
+c3.metric("🔥 Current Streak", current_streak)
+c4.metric("🏆 Best Streak", best)
+
+c5,c6,c7,c8 = st.columns(4)
+
+c5.metric("Gym Days", df["Gym"].sum())
+c6.metric("Study Hours", f"{df['Study'].sum():.1f}")
+c7.metric("😴 Avg Sleep", f"{df['Sleep_Duration'].mean():.1f}h")
+c8.metric("💪 Gym Rate", f"{(df['Gym'].sum()/len(df))*100:.0f}%")
 
 st.divider()
-# --- SCORE TREND ---
-col1, col2, col3 = st.columns(3)
+
+# ---------------- CHART ROW 1 ----------------
+
+col1,col2,col3 = st.columns(3)
 
 with col1:
 
     st.subheader("Score Trend")
 
-    fig_line = px.line(
-        df,
-        x="Date_Str",
-        y="Score",
-        markers=True,
-        template="plotly_white"
-    )
+    fig = px.line(df,x="Date_Str",y="Score",markers=True)
 
-    fig_line.update_yaxes(range=[0, 100])
+    fig.update_yaxes(range=[0,100])
 
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
 with col2:
 
     st.subheader("Day Status")
 
-    status_count = df["Status"].value_counts().reset_index()
-    status_count.columns = ["Status", "Days"]
+    status = df["Status"].value_counts().reset_index()
+    status.columns=["Status","Days"]
 
-    fig_status = px.bar(
-        status_count,
-        x="Status",
-        y="Days",
-        color="Status",
-        template="plotly_white",
-        color_discrete_map={
-            "🔥 Disciplined Day": "#2ecc71",
-            "😊 Avg Day": "#f1c40f",
-            "💀 Wasted Day": "#e74c3c"
-        }
-    )
+    fig = px.bar(status,x="Status",y="Days",color="Status")
 
-    st.plotly_chart(fig_status, use_container_width=True)
+    st.plotly_chart(fig,use_container_width=True)
 
 with col3:
 
     st.subheader("Daily Spending")
 
-    base = alt.Chart(df).encode(
-        x='Date_Str:O',
-        y='Paid:Q'
-    )
+    base = alt.Chart(df).encode(x="Date_Str:O",y="Paid:Q")
 
-    line = base.mark_line(color='#ff4b4b')
+    line = base.mark_line()
 
-    rule = alt.Chart(
-        pd.DataFrame({'y': [100000]})
-    ).mark_rule(
-        color='green',
-        strokeDash=[5,5]
-    ).encode(y='y')
+    st.altair_chart(line,use_container_width=True)
 
-    st.altair_chart(line + rule, use_container_width=True)
+# ---------------- CHART ROW 2 ----------------
 
-# --- SLEEP ---
-col4, col5, col6 = st.columns(3)
+col4,col5,col6 = st.columns(3)
 
 with col4:
 
     st.subheader("Sleep Patterns")
 
-    sleep_df = df[df['Sleep'].notna()].copy()
+    sleep_df = df[df["Sleep"].notna()].copy()
 
-    sleep_df['Hour'] = sleep_df['Sleep'].dt.hour + sleep_df['Sleep'].dt.minute / 60
-
-    fig_sleep = px.scatter(
-        sleep_df,
-        x="Date_Str",
-        y="Hour",
-        template="plotly_white"
-    )
-
-    fig_sleep.update_yaxes(range=[0,24])
-
-    st.plotly_chart(fig_sleep, use_container_width=True)
-
-with col5:
-
-    st.subheader("WakeUp Patterns")
-
-    wake_df = df[df['WakeUp'].notna()].copy()
-
-    wake_df['Hour'] = wake_df['WakeUp'].dt.hour + wake_df['WakeUp'].dt.minute / 60
-
-    fig_wake = px.scatter(
-        wake_df,
-        x="Date_Str",
-        y="Hour",
-        template="plotly_white"
-    )
-
-    fig_wake.update_yaxes(range=[0,24])
-
-    st.plotly_chart(fig_wake, use_container_width=True)
-
-with col6:
-
-    st.subheader("Sleep Duration")
-
-    chart = alt.Chart(df).mark_line(point=True).encode(
-        x='Date_Str:O',
-        y='Sleep_Duration:Q'
-    )
-
-    st.altair_chart(chart, use_container_width=True)
-
-st.divider()
-
-
-st.divider()
-
-col7, col8 = st.columns(2)
-
-# --- GYM ACTIVITY ---
-with col7:
-
-    st.subheader("💪 Gym Activity")
-
-    gym_df = df.copy()
-
-    gym_df = gym_df[gym_df["Gym"] == True]
-
-    gym_df["Weekday"] = gym_df["Date"].dt.day_name()
-    gym_df["WeekOfMonth"] = (gym_df["Date"].dt.day - 1) // 7 + 1
-    gym_df["Month"] = gym_df["Date"].dt.strftime("%b")
-
-    gym_df["WeekLabel"] = "W" + gym_df["WeekOfMonth"].astype(str) + " " + gym_df["Month"]
-
-    order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-    gym_df["Weekday"] = pd.Categorical(gym_df["Weekday"], categories=order, ordered=True)
-
-    fig = px.scatter(
-        gym_df,
-        x="WeekLabel",
-        y="Weekday",
-        hover_data=["Date"]
-    )
-
-    fig.update_traces(
-        marker=dict(
-            size=18,
-            color="#2ecc71"
-        )
-    )
-
-    fig.update_layout(
-        template="plotly_white",
-        xaxis_title="",
-        yaxis_title="",
-        height=320
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-# --- STUDY HOURS ---
-with col8:
-
-    st.subheader("📚 Study Hours Trend")
-
-    fig_study = px.line(
-        df,
-        x="Date_Str",
-        y="Study",
-        markers=True,
-        template="plotly_white"
-    )
-
-    st.plotly_chart(fig_study, use_container_width=True)
-
-# --- TABLE ---
-with st.expander("Xem chi tiết logs"):
-    st.dataframe(df.sort_values("Date", ascending=False))
+    sleep_df
