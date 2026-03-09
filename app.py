@@ -42,7 +42,7 @@ h2, h3 {
 """, unsafe_allow_html=True)
 
 # --- NOTION CONFIG ---
-notion = Client(auth="ntn_i54190021105ZKjN59KWfGDEg08YaxNowrGqALVYdP75wx")
+notion = Client(auth=st.secrets["NOTION_TOKEN"])
 DATABASE_ID = "31b142ff68fe809c9ec0d8dc27dcea43"
 
 # --- DATA LOAD ---
