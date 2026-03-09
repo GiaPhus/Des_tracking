@@ -110,7 +110,7 @@ def get_data_from_notion():
             status_calc = "😊 Avg Day"
         else:
             status_calc = "💀 Wasted Day"
-
+        
         data.append({
             "Date": props["Date"]["date"]["start"],
             "Score": score_calc,
@@ -120,7 +120,8 @@ def get_data_from_notion():
             "Study": study,
             "Status": status_calc,
             "WakeUp": wake_up_time,
-            "Sleep": sleep_time
+            "Sleep": sleep_time,
+            "NSFW": get_c("NSFW_Event"),
         })
 
     return pd.DataFrame(data)
@@ -140,6 +141,17 @@ for val in df["Disciplined"]:
     if val:
         current += 1
         best_streak = max(best_streak, current)
+    else:
+        current = 0
+df["CleanDay"] = df["NSFW"] == False
+
+best_nsfw_streak = 0
+current = 0
+
+for val in df["CleanDay"]:
+    if val:
+        current += 1
+        best_nsfw_streak = max(best_nsfw_streak, current)
     else:
         current = 0
 
@@ -173,20 +185,29 @@ def metric_card(label, value):
         st.metric(label, value)
 # --- KPIs ---
 st.title("📊 Discipline Control Center")
+current_nsfw_streak = 0
 
-c1, c2, c3, c4,c9 = st.columns(5)
+for val in reversed(df["CleanDay"].tolist()):
+    if val:
+        current_nsfw_streak += 1
+    else:
+        break
+    
+c1, c2, c3, c4,c9,c11 = st.columns(6)
 with c1: metric_card("Avg Score", f"{df['Score'].mean():.1f}")
 with c2: metric_card("Total Paid", f"{df['Paid'].sum():,.0f} VNĐ")
 with c3: metric_card("Gym Days", df['Gym'].sum())
 with c4: metric_card("Study Hours", f"{df['Study'].sum():.1f}")
 with c9: metric_card("🔥 Current Streak", current_streak)
+with c11: metric_card("🧘 Phim Streak", current_nsfw_streak)
 
-c5, c6, c7, c8,c10 = st.columns(5)
+c5, c6, c7, c8,c10,c12 = st.columns(6)
 with c5: metric_card("🔥 Discipline Days", (df["Score"] >= 70).sum())
 with c6: metric_card("📚 Avg Study/Day", f"{df['Study'].mean():.1f}h")
 with c7: metric_card("😴 Avg Sleep", f"{df['Sleep_Duration'].mean():.1f}h")
 with c8: metric_card("💪 Gym Rate", f"{(df['Gym'].sum() / len(df)) * 100:.0f}%")
 with c10: metric_card("🏆 Best Streak", best_streak)
+with c12: metric_card("🧘 Best Phim Streak", best_nsfw_streak)
 st.divider()
 # --- SCORE TREND ---
 col1, col2, col3 = st.columns(3)
@@ -363,6 +384,7 @@ with col8:
     )
 
     st.plotly_chart(fig_study, use_container_width=True)
+
 
 # --- TABLE ---
 with st.expander("Xem chi tiết logs"):
