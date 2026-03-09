@@ -127,7 +127,8 @@ def get_data_from_notion():
     return pd.DataFrame(data)
 
 df = get_data_from_notion()
-
+if "NSFW" not in df.columns:
+    df["NSFW"] = False
 df['Date'] = pd.to_datetime(df['Date'])
 df = df.sort_values("Date")
 # -------- STREAK CALCULATION --------
