@@ -385,6 +385,87 @@ with col8:
 
     st.plotly_chart(fig_study, use_container_width=True)
 
+st.divider()
+
+# =============================
+# EXTRA ANALYTICS
+# =============================
+
+col9, col10 = st.columns(2)
+
+# --- STUDY VS SCORE ---
+with col9:
+
+    st.subheader("📈 Study vs Score")
+
+    fig_corr = px.scatter(
+        df,
+        x="Study",
+        y="Score",
+        trendline="ols",
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig_corr, use_container_width=True)
+
+
+# --- CLEAN DAYS TRACKER ---
+with col10:
+
+    st.subheader("🧘 Clean Days (NSFW Tracker)")
+
+    clean_df = df.copy()
+    clean_df["Clean"] = clean_df["NSFW"].apply(lambda x: "❌" if x else "✅")
+
+    fig_clean = px.scatter(
+        clean_df,
+        x="Date_Str",
+        y="Clean",
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig_clean, use_container_width=True)
+
+
+
+st.divider()
+
+col11, col12 = st.columns(2)
+
+# --- SCORE DISTRIBUTION ---
+with col11:
+
+    st.subheader("📊 Score Distribution")
+
+    fig_hist = px.histogram(
+        df,
+        x="Score",
+        nbins=10,
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig_hist, use_container_width=True)
+
+
+# --- DISCIPLINE CALENDAR STYLE ---
+with col12:
+
+    st.subheader("🔥 Discipline Days Timeline")
+
+    cal_df = df.copy()
+
+    cal_df["Disciplined"] = cal_df["Score"].apply(
+        lambda x: "🔥" if x >= 70 else "❌"
+    )
+
+    fig_cal = px.scatter(
+        cal_df,
+        x="Date_Str",
+        y="Disciplined",
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig_cal, use_container_width=True)
 
 # --- TABLE ---
 with st.expander("Xem chi tiết logs"):
