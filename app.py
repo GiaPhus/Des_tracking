@@ -121,14 +121,14 @@ def get_data_from_notion():
             "Status": status_calc,
             "WakeUp": wake_up_time,
             "Sleep": sleep_time,
-            "NSFW": get_c("NSFW_Event"),
+            "NSFW": get_val("NSFW_Event"),
         })
 
     return pd.DataFrame(data)
 
 df = get_data_from_notion()
 if "NSFW" not in df.columns:
-    df["NSFW"] = False
+    df["NSFW"] = 1
 df['Date'] = pd.to_datetime(df['Date'])
 df = df.sort_values("Date")
 # -------- STREAK CALCULATION --------
@@ -144,7 +144,7 @@ for val in df["Disciplined"]:
         best_streak = max(best_streak, current)
     else:
         current = 0
-df["CleanDay"] = df["NSFW"] == False
+df["CleanDay"] = df["NSFW"] == 1
 
 best_nsfw_streak = 0
 current = 0
