@@ -100,7 +100,7 @@ def get_data_from_notion():
             + min(study * 5, 30)
             + min(pushup / 5, 20)
             + (15 if (wake_up_time and (wake_up_time + timedelta(hours=7)).hour <= 8) else 0)
-            + (10 if leisure <= 2 else 0)
+            + (10 if leisure <= 5 else 0)
             + (5 if eat >= 3 else 0)
         )
 
