@@ -3,6 +3,22 @@ import pandas as pd
 from datetime import datetime
 import calendar
 
+st.markdown("""
+<style>
+
+button[kind="secondary"] {
+    border: none !important;
+    background: transparent !important;
+    font-size: 18px !important;
+}
+
+button[kind="secondary"]:hover {
+    color: red !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(page_title="Todo Manager", layout="wide")
 
 st.title("📝 Monthly Todo Manager")
