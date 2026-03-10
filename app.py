@@ -96,12 +96,13 @@ def get_data_from_notion():
         eat = get_val("Eat_times")
 
         nsfw = get_val("NSFW_Event")
+        sleep_duration = get_val("Sleep_Duration")
 
         score_calc = (
             (20 if gym else 0)
             + min(study * 5, 30)
             + min(pushup / 5, 20)
-            + (15 if (wake_up_time and abs(wake_up_time.hour - sleep_time.hour) >= 8) else 0)
+            + (15 if (sleep_duration >= 8) else 0)
             + (10 if leisure <= 5 else 0)
             + (5 if eat >= 3 else 0)
             - (10 if nsfw == 1 else 0)
