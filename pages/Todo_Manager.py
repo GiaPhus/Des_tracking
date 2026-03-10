@@ -130,7 +130,7 @@ for day in range(1, num_days + 1):
             if not isinstance(task, dict):
                 continue
 
-            c1, c2 = st.columns([0.15, 0.85])
+            c1, c2, c3 = st.columns([0.15, 0.70, 0.15])
 
             with c1:
                 done = st.checkbox(
@@ -138,11 +138,17 @@ for day in range(1, num_days + 1):
                     value=task.get("done", False),
                     key=f"{key}-{i}"
                 )
-
                 task["done"] = done
 
             with c2:
                 st.write(task.get("task", ""))
+
+            with c3:
+                if st.button("❌", key=f"del-{key}-{i}"):
+
+                    st.session_state.todos[key].pop(i)
+
+                    st.rerun()
 
         # add new task
         new_task = st.text_input(
