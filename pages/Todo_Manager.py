@@ -144,10 +144,8 @@ for day in range(1, num_days + 1):
                 st.write(task.get("task", ""))
 
             with c3:
-                if st.button("❌", key=f"del-{key}-{i}"):
-
+                if st.button("🗑️", key=f"del-{key}-{i}", help="Delete task"):
                     st.session_state.todos[key].pop(i)
-
                     st.rerun()
 
         # add new task
