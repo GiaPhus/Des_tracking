@@ -106,7 +106,7 @@ def get_data_from_notion():
             + (10 if leisure <= 5 else 0)
             + (5 if eat >= 3 else 0)
             - (10 if nsfw == 1 else 0)
-            - (10 if sleep_time and sleep_time.hour == 1 or sleep_time.hour == 2 else 0)
+            # - (10 if sleep_time and sleep_time.hour == 1 or sleep_time.hour == 2 else 0)
         )
 
         if score_calc >= 75:
