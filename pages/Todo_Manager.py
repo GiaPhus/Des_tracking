@@ -36,7 +36,7 @@ for day, tasks in st.session_state.todos.items():
     if len(tasks) == 0:
         continue
 
-    done = sum(t["done"] for t in tasks)
+    done = sum(1 for t in tasks if isinstance(t, dict) and t.get("done"))
 
     total_tasks += len(tasks)
     done_tasks += done
