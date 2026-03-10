@@ -101,7 +101,7 @@ def get_data_from_notion():
             (20 if gym else 0)
             + min(study * 5, 30)
             + min(pushup / 5, 20)
-            + (15 if (wake_up_time and wake_up_time.hour <= 8) else 0)
+            + (15 if (wake_up_time and wake_up_time.hour >= 8) else 0)
             + (10 if leisure <= 5 else 0)
             + (5 if eat >= 3 else 0)
             - (10 if nsfw == 1 else 0)
