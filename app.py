@@ -109,7 +109,7 @@ def get_data_from_notion():
             - (5 if sleep_time and sleep_time.hour == 1 or sleep_time.hour == 2 else 0)
         )
 
-        if score_calc >= 75:
+        if score_calc >= 70:
             status_calc = "🔥 Disciplined Day"
         elif score_calc >= 50:
             status_calc = "😊 Avg Day"
