@@ -96,7 +96,7 @@ def get_data_from_notion():
         eat = get_val("Eat_times")
 
         nsfw = get_val("NSFW_Event")
-        sleep_duration = get_val("Sleep_Duration")
+        sleep_duration = get_val("Sleep_Hours")
 
         score_calc = (
             (20 if gym else 0)
