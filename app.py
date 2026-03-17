@@ -5,69 +5,58 @@ import altair as alt
 from notion_client import Client
 from datetime import timedelta
 
-st.set_page_config(page_title="Discipline Tracker", layout="wide")
+st.set_page_config(page_title="Discipline Tracker", layout="wide", page_icon="🔥")
 
-# =============================
-# THEME DETECTION
-# =============================
-theme = st.get_option("theme.base")
-
-if theme == "dark":
-    plotly_template = "plotly_dark"
-    text_color = "white"
-    alt.themes.enable("dark")
-else:
-    plotly_template = "plotly_white"
-    text_color = "black"
-    alt.themes.enable("default")
-
-# =============================
-# STYLE
-# =============================
-st.markdown(f"""
+# Tối ưu CSS để giao diện trông sang trọng hơn
+st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
 
-.stApp {{
-    background-color: transparent;
-}}
+    .main {
+        background: radial-gradient(circle at top right, rgba(0, 198, 255, 0.05), transparent),
+                    radial-gradient(circle at bottom left, rgba(0, 114, 255, 0.05), transparent);
+    }
 
-.block-container {{
-    padding-top: 1rem;
-    padding-bottom: 2rem;
-}}
+    /* Tùy chỉnh Metric Card */
+    div[data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
 
-[data-testid="metric-container"] {{
-    background-color: rgba(255,255,255,0.05);
-    border: 1px solid rgba(200,200,200,0.2);
-    padding: 15px;
-    border-radius: 12px;
-}}
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-5px);
+        border: 1px solid #0072ff;
+        background: rgba(0, 114, 255, 0.05);
+    }
 
-[data-testid="metric-container"]:hover {{
-    transform: scale(1.03);
-    transition: 0.2s;
-}}
+    /* Style tiêu đề */
+    .main-title {
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 0px;
+    }
 
-[data-testid="stMetricValue"] {{
-    font-size: 30px;
-}}
-
+    /* Divider mờ hơn */
+    hr {
+        margin: 2em 0;
+        opacity: 0.1;
+    }
+    
+    /* Plotly Chart Container */
+    .plot-container {
+        border-radius: 15px;
+        overflow: hidden;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# =============================
-# TITLE
-# =============================
-st.markdown("""
-<h1 style='
-    background: linear-gradient(90deg, #00c6ff, #0072ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-'>
-📊 Discipline Control Center
-</h1>
-""", unsafe_allow_html=True)
-
 # --- NOTION CONFIG ---
 notion = Client(auth=st.secrets["NOTION_TOKEN"])
 DATABASE_ID = "31b142ff68fe809c9ec0d8dc27dcea43"
